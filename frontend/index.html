@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mill Analyzer | FLS</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+        body { background: #f8fafb; }
+        .fls-header { background: #073059; }
+        .fls-gradient { background: linear-gradient(135deg, #073059 0%, #0a4575 100%); }
+        .card-shadow { box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); }
+        .metric-card { transition: all 0.2s ease; background: white; border: 1px solid #d9e5ff; }
+        .metric-card:hover { box-shadow: 0 4px 12px rgba(7, 48, 89, 0.08); transform: translateY(-2px); }
+        .btn-primary { background: #073059; transition: all 0.2s ease; }
+        .btn-primary:hover { background: #0a4575; box-shadow: 0 4px 12px rgba(7, 48, 89, 0.2); }
+        .btn-secondary { background: white; color: #073059; border: 2px solid #d9e5ff; transition: all 0.2s ease; }
+        .btn-secondary:hover { border-color: #073059; box-shadow: 0 4px 12px rgba(7, 48, 89, 0.1); }
+        .upload-zone { border: 2px dashed #d9e5ff; background: white; transition: all 0.3s ease; }
+        .upload-zone:hover { border-color: #073059; background: #f8fafb; }
+        .upload-zone.active { border-color: #073059; background: #f0f5ff; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useRef, useEffect } = React;
+
+        // --- Icons ---
+        const Upload = () => ( <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg> );
+        const CheckCircle = () => ( <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> );
+        const Loader = () => ( <svg className="w-8 h-8 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg> );
+        const Download = () => ( <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg> );
+        const AlertCircle = () => ( <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> );
+        const SettingsIcon = () => ( <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg> );
+        const ClipboardIcon = () => ( <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg> );
+        const EyeIcon = () => ( <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg> );
+        const EyeOffIcon = () => ( <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg> );
+
+        const BallMillAnalyzer = () => {
+            // --- State ---
+            const [user, setUser] = useState(null);
+            const [authMode, setAuthMode] = useState('login');
+            const [showSettings, setShowSettings] = useState(false);
+            const [authLoading, setAuthLoading] = useState(true);
+            const [file, setFile] = useState(null);
+            const [processing, setProcessing] = useState(false);
+            const [results, setResults] = useState(null);
+            const [error, setError] = useState(null);
+            const [imageUrl, setImageUrl] = useState(null);
+            const [copiedValue, setCopiedValue] = useState(null);
+            const [showPassword, setShowPassword] = useState(false);
+            const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+            const [showNewPassword, setShowNewPassword] = useState(false);
+            const [passwordError, setPasswordError] = useState('');
+            const fileInputRef = useRef(null);
+
+            // Password validation
+            const validatePassword = (password) => {
+                if (password.length < 8) return 'Password must be at least 8 characters long';
+                if (!/[A-Z]/.test(password)) return 'Password must contain at least one uppercase letter';
+                if (!/[a-z]/.test(password)) return 'Password must contain at least one lowercase letter';
+                if (!/[0-9]/.test(password)) return 'Password must contain at least one number';
+                if (!/[!@#$%^&*]/.test(password)) return 'Password must contain at least one special character (!@#$%^&*)';
+                return '';
+            };
+
+            const copyEntireTable = async () => {
+                if (!results) return;
+                const tableText = `Mill Fill Level Analysis Results
+Generated: ${results.timestamp}
+File: ${results.filename}
+
+1. Effective Diameter (mm) - ${results.param_1_diameter_mm.toFixed(0)}
+2. Effective Length (mm) - ${results.param_2_length_mm.toFixed(0)}
+3. Average Free Height Over Load (mm) - ${results.param_3_free_height_mm.toFixed(0)}
+4. Total Internal Volume (m³) - ${results.param_4_total_volume_m3.toFixed(1)}
+5. Total Volume Occupied by Load (m³) - ${results.param_5_total_occupied_m3.toFixed(1)}
+6. Internal Volume of Cylinder (m³) - ${results.param_6_cylinder_volume_m3.toFixed(1)}
+7. Volume Occupied in Cylinder (m³) - ${results.param_7_cylinder_occupied_m3.toFixed(1)}
+8. Total Mill Filling (%) - ${results.param_8_total_fill_pct.toFixed(2)}
+9. Cylinder Filling (%) - ${results.param_9_cylinder_fill_pct.toFixed(2)}`;
+                
+                try {
+                    await navigator.clipboard.writeText(tableText);
+                    setCopiedValue('table');
+                    setTimeout(() => setCopiedValue(null), 2000);
+                } catch (err) {
+                    console.error('Failed to copy table:', err);
+                }
+            };
+
+            // --- Auth Logic ---
+            useEffect(() => { fetchCurrentUser(); }, []);
+
+            const fetchCurrentUser = async () => {
+                try {
+                    const res = await fetch('/api/auth/me');
+                    if (res.ok) { const data = await res.json(); setUser(data.user); }
+                } catch (err) { console.error("Session check failed"); }
+                finally { setAuthLoading(false); }
+            };
+
+            const handleAuthSubmit = async (e) => {
+                e.preventDefault();
+                setError(null);
+                setPasswordError('');
+                const formData = new FormData(e.target);
+                const payload = Object.fromEntries(formData);
+                
+                if (authMode === 'signup') {
+                    const passwordValidation = validatePassword(payload.password);
+                    if (passwordValidation) {
+                        setPasswordError(passwordValidation);
+                        return;
+                    }
+                }
+                
+                const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/signup';
+                try {
+                    const res = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await res.json();
+                    if (res.ok) { setUser(data.user); } else { setError(data.error); }
+                } catch (err) { setError("Server communication error."); }
+            };
+
+            const handleUpdateSettings = async (e) => {
+                e.preventDefault();
+                setError(null);
+                setPasswordError('');
+                const formData = new FormData(e.target);
+                const payload = Object.fromEntries(formData);
+                
+                if (payload.new_password) {
+                    const passwordValidation = validatePassword(payload.new_password);
+                    if (passwordValidation) { setPasswordError(passwordValidation); return; }
+                    if (!payload.current_password) { setPasswordError('Current password is required'); return; }
+                }
+                if (!payload.current_password) { delete payload.current_password; delete payload.new_password; }
+                
+                try {
+                    const res = await fetch('/api/user/update', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await res.json();
+                    if (res.ok) { 
+                        setUser(data.user); 
+                        setShowSettings(false); 
+                        setShowCurrentPassword(false);
+                        setShowNewPassword(false);
+                        alert(payload.new_password ? "Settings updated!" : "Settings updated!"); 
+                    } else { setPasswordError(data.error || "Update failed."); }
+                } catch (err) { setPasswordError("Error updating settings."); }
+            };
+
+            const handleLogout = async () => {
+                await fetch('/api/auth/logout', { method: 'POST' });
+                setUser(null);
+                setResults(null);
+            };
+
+            // --- Analysis Logic ---
+            const handleFileSelect = (e) => {
+                const selectedFile = e.target.files[0];
+                if (selectedFile && selectedFile.name.match(/\.(ply|xyz|txt|csv)$/i)) {
+                    setFile(selectedFile); setError(null); setResults(null); setImageUrl(null);
+                } else { setError('Please select a valid point cloud file (.ply, .xyz, .txt, .csv)'); }
+            };
+
+            const processFile = async () => {
+                if (!file) return;
+                setProcessing(true); setError(null);
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    const response = await fetch('/api/analyze', { method: 'POST', body: formData });
+                    if (!response.ok) throw new Error((await response.json()).error || 'Analysis failed');
+                    const data = await response.json();
+                    setResults({ ...data, filename: file.name, timestamp: new Date().toLocaleString() });
+                    // Keep URL in state for PPT generation, but don't render it in the JSX
+                    if (data.image_filename) setImageUrl(`/api/download-image/${data.image_filename}`);
+                } catch (err) { setError(`Error: ${err.message}`); }
+                finally { setProcessing(false); }
+            };
+
+            // --- Exports ---
+            const downloadPPT = async () => {
+                if (!results) return;
+
+                if (!window.PptxGenJS) {
+                    const script = document.createElement('script');
+                    script.src = 'https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js';
+                    document.head.appendChild(script);
+                    script.onload = () => generatePPT();
+                } else {
+                    generatePPT();
+                }
+
+                async function generatePPT() {
+                    try {
+                        const pptx = new PptxGenJS();
+                        pptx.layout = 'LAYOUT_16x9';
+                        
+                        // Slide 1: Title
+                        const slide1 = pptx.addSlide();
+                        slide1.background = { color: '073059' };
+                        slide1.addText('Mill Fill Level Analysis', { x:0.5, y:1.8, w:9, h:1.2, fontSize:44, bold:true, color:'FFFFFF', align:'center' });
+                        slide1.addText(`File: ${results.filename}\nDate: ${results.timestamp}`, { x:0.5, y:3.2, w:9, h:0.8, fontSize:16, color:'FFFFFF', align:'center' });
+
+                        // Slide 2: Visual Analysis (Image) - This is where the image goes
+                        const slide2 = pptx.addSlide();
+                        slide2.addText('Visual Analysis', { x:0.5, y:0.4, w:9, h:0.6, fontSize:32, bold:true, color:'073059' });
+                        
+                        if (imageUrl) {
+                            try {
+                                const resp = await fetch(imageUrl);
+                                const blob = await resp.blob();
+                                const base64Data = await new Promise((resolve) => {
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => resolve(reader.result);
+                                    reader.readAsDataURL(blob);
+                                });
+                                slide2.addImage({ data: base64Data, x:0.5, y:1.0, w:9.0, h:4.5 });
+                            } catch (e) {
+                                console.error("Could not fetch image for PPT", e);
+                            }
+                        } else {
+                            slide2.addText("No visual analysis available", { x:0.5, y:2.5, w:9, align:'center', color:'888888' });
+                        }
+
+                        // Slide 3: Results Table
+                        const slide3 = pptx.addSlide();
+                        slide3.addText('Calculation Results', { x:0.5, y:0.4, w:9, h:0.6, fontSize:32, bold:true, color:'073059' });
+                        const rows = [
+                            [{text:'Parameter', options:{bold:true, color:'FFFFFF', fill:'073059'}}, {text:'Calculated', options:{bold:true, color:'FFFFFF', fill:'073059'}}],
+                            ['Effective Diameter (mm)', results.param_1_diameter_mm.toFixed(0)],
+                            ['Effective Length (mm)', results.param_2_length_mm.toFixed(0)],
+                            ['Free Height (mm)', results.param_3_free_height_mm.toFixed(0)],
+                            ['Total Internal Volume (m³)', results.param_4_total_volume_m3.toFixed(1)],
+                            ['Total Volume Occupied (m³)', results.param_5_total_occupied_m3.toFixed(1)],
+                            ['Cylinder Volume (m³)', results.param_6_cylinder_volume_m3.toFixed(1)],
+                            ['Cylinder Occupied (m³)', results.param_7_cylinder_occupied_m3.toFixed(1)],
+                            ['Total Mill Filling (%)', results.param_8_total_fill_pct.toFixed(2)],
+                            ['Cylinder Filling (%)', results.param_9_cylinder_fill_pct.toFixed(2)]
+                        ];
+                        slide3.addTable(rows, { x:0.8, y:1.2, w:8.4, rowH:0.40, border:{pt:1, color:'d9e5ff'}, fontSize:11 });
+
+                        pptx.writeFile({ fileName: `Analysis_${results.filename.split('.')[0]}.pptx` });
+                    } catch(err) {
+                        console.error("PPT Gen Error", err);
+                    }
+                }
+            };
+
+            const downloadHTMLReport = () => { 
+                if (!results) return;
+                const reportHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mill Analysis Report</title>
+    <style>
+        body { font-family: 'Inter', -apple-system, sans-serif; padding: 40px; background: #f8fafb; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 40px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); border-radius: 8px; }
+        .header { background: #073059; color: white; padding: 30px; margin: -40px -40px 40px -40px; border-radius: 8px 8px 0 0; }
+        h1 { margin: 0; font-size: 32px; }
+        .meta { margin-top: 10px; opacity: 0.9; font-size: 14px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 14px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+        th { background: #f4f7f9; font-weight: 600; color: #073059; }
+        tr:hover { background: #f9fafb; }
+        .footer { margin-top: 40px; padding-top: 20px; border-top: 2px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Mill Fill Level Analysis Report</h1>
+            <div class="meta">File: ${results.filename} | Generated: ${results.timestamp}</div>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Parameter</th>
+                    <th>Calculated Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>1. Effective Diameter (mm)</td><td>${results.param_1_diameter_mm.toFixed(0)}</td></tr>
+                <tr><td>2. Effective Length (mm)</td><td>${results.param_2_length_mm.toFixed(0)}</td></tr>
+                <tr><td>3. Average Free Height Over Load (mm)</td><td>${results.param_3_free_height_mm.toFixed(0)}</td></tr>
+                <tr><td>4. Total Internal Volume (m³)</td><td>${results.param_4_total_volume_m3.toFixed(1)}</td></tr>
+                <tr><td>5. Total Volume Occupied by Load (m³)</td><td>${results.param_5_total_occupied_m3.toFixed(1)}</td></tr>
+                <tr><td>6. Internal Volume of Cylinder (m³)</td><td>${results.param_6_cylinder_volume_m3.toFixed(1)}</td></tr>
+                <tr><td>7. Volume Occupied in Cylinder (m³)</td><td>${results.param_7_cylinder_occupied_m3.toFixed(1)}</td></tr>
+                <tr><td>8. Total Mill Filling (%)</td><td>${results.param_8_total_fill_pct.toFixed(2)}</td></tr>
+                <tr><td>9. Cylinder Filling (%)</td><td>${results.param_9_cylinder_fill_pct.toFixed(2)}</td></tr>
+            </tbody>
+        </table>
+        <div class="footer">© ${new Date().getFullYear()} FLS - Mill Analyzer</div>
+    </div>
+</body>
+</html>`;
+                const blob = new Blob([reportHTML], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); 
+                a.href = url; 
+                a.download = `MillAnalysis_${results.filename.split('.')[0]}_${Date.now()}.html`; 
+                a.click();
+                URL.revokeObjectURL(url);
+            };
+
+            if (authLoading) return <div className="min-h-screen flex items-center justify-center"><Loader /></div>;
+
+            if (!user) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center p-6" style={{background: '#f8fafb'}}>
+                        <div className="bg-white rounded-lg card-shadow p-10 w-full max-w-md">
+                            <h2 className="text-3xl font-bold mb-6 text-center" style={{color: '#073059'}}>{authMode === 'login' ? 'Sign In' : 'Create Account'}</h2>
+                            <form onSubmit={handleAuthSubmit} className="space-y-4">
+                                {authMode === 'signup' && <input name="name" type="text" placeholder="Full Name" required className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-[#073059]" />}
+                                <input name="email" type="email" placeholder="Email" required className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-[#073059]" />
+                                <div className="relative">
+                                    <input name="password" type={showPassword ? "text" : "password"} placeholder="Password" required className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-[#073059] pr-12" />
+                                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700">
+                                        {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                                    </button>
+                                </div>
+                                {authMode === 'signup' && <div className="text-xs text-gray-600 bg-blue-50 p-3 rounded"><strong>Password must contain:</strong><ul className="mt-1 ml-4 list-disc"><li>At least 8 characters</li><li>One uppercase & one lowercase letter</li><li>One number</li><li>One special character (!@#$%^&*)</li></ul></div>}
+                                {passwordError && <div className="text-red-600 text-sm bg-red-50 p-3 rounded">{passwordError}</div>}
+                                {error && <div className="text-red-600 text-sm">{error}</div>}
+                                <button type="submit" className="w-full btn-primary text-white font-bold py-3 rounded-lg">{authMode === 'login' ? 'Login' : 'Sign Up'}</button>
+                            </form>
+                            <button onClick={() => { setAuthMode(authMode === 'login' ? 'signup' : 'login'); setPasswordError(''); setError(null); setShowPassword(false); }} className="w-full mt-4 text-sm font-medium hover:underline" style={{color: '#073059'}}>{authMode === 'login' ? "Need an account? Sign Up" : "Have an account? Login"}</button>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen" style={{background: '#f8fafb'}}>
+                    <div className="fls-header text-white py-8 px-4"><div className="max-w-7xl mx-auto flex justify-between items-center"><div><h1 className="text-3xl font-semibold">Mill Analyzer</h1><p className="opacity-90">{user.name}</p></div><div className="flex items-center gap-4"><button onClick={()=>setShowSettings(true)} className="hover:bg-white/10 p-2 rounded-full transition-all"><SettingsIcon /></button><button onClick={handleLogout} className="text-xs font-semibold border border-white/30 px-4 py-2 rounded-lg hover:bg-white/10">Logout</button></div></div></div>
+                    {showSettings && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-lg p-8 w-full max-w-md shadow-2xl"><h2 className="text-2xl font-bold mb-6" style={{color: '#073059'}}>Profile Settings</h2><form onSubmit={handleUpdateSettings} className="space-y-4"><div><label className="block text-sm font-medium text-gray-700 mb-1">Name</label><input name="name" defaultValue={user.name} required className="w-full p-2 border rounded focus:ring-2 focus:ring-[#073059] outline-none" /></div><div className="pt-2 pb-2"><hr className="border-gray-200" /><p className="text-sm font-medium text-gray-700 mt-3 mb-3">Change Password (Optional)</p></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label><div className="relative"><input name="current_password" type={showCurrentPassword ? "text" : "password"} placeholder="Enter current password" className="w-full p-2 border rounded focus:ring-2 focus:ring-[#073059] outline-none pr-10" /><button type="button" onClick={() => setShowCurrentPassword(!showCurrentPassword)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700">{showCurrentPassword ? <EyeOffIcon /> : <EyeIcon />}</button></div></div><div><label className="block text-sm font-medium text-gray-700 mb-1">New Password</label><div className="relative"><input name="new_password" type={showNewPassword ? "text" : "password"} placeholder="Enter new password" className="w-full p-2 border rounded focus:ring-2 focus:ring-[#073059] outline-none pr-10" /><button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700">{showNewPassword ? <EyeOffIcon /> : <EyeIcon />}</button></div><div className="text-xs text-gray-600 bg-blue-50 p-2 rounded mt-2"><strong>Password requirements:</strong> 8+ chars, uppercase, lowercase, number, special char</div></div>{passwordError && <div className="text-red-600 text-sm bg-red-50 p-3 rounded">{passwordError}</div>}<div className="flex gap-4 pt-4"><button type="submit" className="flex-1 btn-primary text-white py-2 rounded font-semibold">Save</button><button type="button" onClick={()=>{setShowSettings(false); setPasswordError(''); setShowCurrentPassword(false); setShowNewPassword(false);}} className="flex-1 btn-secondary py-2 rounded font-semibold">Cancel</button></div></form></div></div>}
+                    <div className="max-w-7xl mx-auto px-4 py-10">
+                        <div className="bg-white rounded-lg card-shadow p-8 mb-8"><h2 className="text-2xl font-semibold mb-6" style={{color: '#073059'}}>Upload Point Cloud Data</h2><div className={`upload-zone rounded-lg p-12 text-center cursor-pointer ${file ? 'active' : ''}`} onClick={() => fileInputRef.current?.click()} onDrop={(e)=>{e.preventDefault(); handleFileSelect({target:{files:e.dataTransfer.files}})}} onDragOver={(e)=>e.preventDefault()}><input ref={fileInputRef} type="file" accept=".ply,.xyz,.txt,.csv" onChange={handleFileSelect} className="hidden" />{file ? <div className="flex flex-col items-center"><div style={{color:'#073059'}}><CheckCircle /></div><p className="text-xl font-semibold mt-4 mb-2" style={{color: '#073059'}}>{file.name}</p><button onClick={(e) => { e.stopPropagation(); setFile(null); setResults(null); }} className="text-sm hover:underline" style={{color: '#073059'}}>Remove file</button></div> : <div className="flex flex-col items-center"><div style={{color:'#073059'}}><Upload /></div><p className="text-xl font-semibold mt-4 mb-2" style={{color: '#073059'}}>Drop point cloud file here</p><p className="text-gray-600">or click to browse</p></div>}</div>{error && <div className="mt-4 p-4 bg-red-50 text-red-700 rounded-lg flex items-center"><AlertCircle /><span className="ml-3">{error}</span></div>}{file && !processing && !results && <button onClick={processFile} className="w-full mt-6 btn-primary text-white font-semibold py-4 rounded-lg text-lg">Start Analysis</button>}{processing && <div className="mt-6 p-6 rounded-lg bg-blue-50 flex items-center border-l-4 border-[#073059]"><Loader /><p className="font-semibold text-lg ml-3" style={{color:'#073059'}}>Analyzing Data...</p></div>}</div>
+                        {results && <div className="bg-white rounded-lg card-shadow p-8"><div className="flex justify-between items-center mb-8"><div><h2 className="text-2xl font-semibold" style={{color: '#073059'}}>Analysis Results</h2><p className="text-sm text-gray-500">{results.timestamp}</p></div><div className="flex gap-3"><button onClick={copyEntireTable} className={`btn-secondary py-3 px-6 rounded-lg flex items-center transition-all ${copiedValue === 'table' ? 'bg-green-50 border-green-500' : ''}`} title="Copy all results"><ClipboardIcon /><span className="ml-2">{copiedValue === 'table' ? 'Copied!' : 'Copy Table'}</span></button><button onClick={downloadPPT} className="btn-primary text-white py-3 px-6 rounded-lg flex items-center"><Download /><span className="ml-2">Export PPT</span></button><button onClick={downloadHTMLReport} className="btn-secondary py-3 px-6 rounded-lg flex items-center"><Download /><span className="ml-2">Export HTML</span></button></div></div><div className="overflow-x-auto"><table className="w-full border-collapse" style={{borderSpacing: 0}}><thead><tr style={{background: '#073059'}}><th className="text-left text-white font-semibold py-3 px-4 border border-gray-200" style={{width: '70%'}}>Parameter</th><th className="text-left text-white font-semibold py-3 px-4 border border-gray-200" style={{width: '30%'}}>Calculated Value</th></tr></thead><tbody><tr className="hover:bg-gray-50"><td className="py-3 px-4 border border-gray-200 text-gray-700">1. Effective Diameter (mm)</td><td className="py-3 px-4 border border-gray-200 font-mono font-semibold" style={{color: '#073059'}}>{results.param_1_diameter_mm.toFixed(0)}</td></tr><tr className="hover:bg-gray-50"><td className="py-3 px-4 border border-gray-200 text-gray-700">2. Effective Length (mm)</td><td className="py-3 px-4 border border-gray-200 font-mono font-semibold" style={{color: '#073059'}}>{results.param_2_length_mm.toFixed(0)}</td></tr><tr className="hover:bg-gray-50"><td className="py-3 px-4 border border-gray-200 text-gray-700">3. Average Free Height Over Load (mm)</td><td className="py-3 px-4 border border-gray-200 font-mono font-semibold" style={{color: '#073059'}}>{results.param_3_free_height_mm.toFixed(0)}</td></tr><tr className="hover:bg-gray-50"><td className="py-3 px-4 border border-gray-200 text-gray-700">4. Total Internal Volume (m³)</td><td className="py-3 px-4 border border-gray-200 font-mono font-semibold" style={{color: '#073059'}}>{results.param_4_total_volume_m3.toFixed(1)}</td></tr><tr className="hover:bg-gray-50"><td className="py-3 px-4 border border-gray-200 text-gray-700">5. Total Volume Occupied by Load (m³)</td><td className="py-3 px-4 border border-gray-200 font-mono font-semibold" style={{color: '#073059'}}>{results.param_5_total_occupied_m3.toFixed(1)}</td></tr><tr className="hover:bg-gray-50"><td className="py-3 px-4 border border-gray-200 text-gray-700">6. Internal Volume of Cylinder (m³)</td><td className="py-3 px-4 border border-gray-200 font-mono font-semibold" style={{color: '#073059'}}>{results.param_6_cylinder_volume_m3.toFixed(1)}</td></tr><tr className="hover:bg-gray-50"><td className="py-3 px-4 border border-gray-200 text-gray-700">7. Volume Occupied in Cylinder (m³)</td><td className="py-3 px-4 border border-gray-200 font-mono font-semibold" style={{color: '#073059'}}>{results.param_7_cylinder_occupied_m3.toFixed(1)}</td></tr><tr className="hover:bg-gray-50"><td className="py-3 px-4 border border-gray-200 text-gray-700">8. Total Mill Filling (%)</td><td className="py-3 px-4 border border-gray-200 font-mono font-semibold" style={{color: '#073059'}}>{results.param_8_total_fill_pct.toFixed(2)}</td></tr><tr className="hover:bg-gray-50"><td className="py-3 px-4 border border-gray-200 text-gray-700">9. Cylinder Filling (%)</td><td className="py-3 px-4 border border-gray-200 font-mono font-semibold" style={{color: '#073059'}}>{results.param_9_cylinder_fill_pct.toFixed(2)}</td></tr></tbody></table></div></div>}
+                    </div>
+                    <div className="fls-header text-white py-6 text-center opacity-75 text-sm">© {new Date().getFullYear()} FLS - Mill Analyzer</div>
+                </div>
+            );
+        };
+        ReactDOM.render(<BallMillAnalyzer />, document.getElementById('root'));
+    </script>
+</body>
+</html>

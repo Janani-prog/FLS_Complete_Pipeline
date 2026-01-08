@@ -1,0 +1,18 @@
+{
+    "demo@example.com": {
+        "email": "demo@example.com",
+        "password": "scrypt:32768:8:1$sx8dh8zytOETZONB$6d309735b330d3557150029ba958559da9cacdf8ff7d679b3e04098cdb40eff7ae98cfd94149a7c69f0d64c356f5ab6dc4f7c4ce23d5bb4b6649b43bda7912b5",
+        "name": "Demo User",
+        "company": "FLS Demo",
+        "role": "Engineer",
+        "created_at": "2026-01-03T13:06:40.595666"
+    },
+    "kamalakkannan.murugan@gmail.com": {
+        "email": "kamalakkannan.murugan@gmail.com",
+        "password": "scrypt:32768:8:1$tKpZSL7HW1Za4HIF$6a14ed77d117954eb21b355bd7ab71a964235d4b3edb35077eeaf5f5345e63631095757b253e42cae183116d87b967464ae3f9b99abc548f6771204ce49943ee",
+        "name": "kk",
+        "company": "Not specified",
+        "role": "User",
+        "created_at": "2026-01-03T13:06:57.874223"
+    }
+}
