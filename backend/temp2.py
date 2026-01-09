@@ -485,6 +485,7 @@ def predict_single_mill(user_dia, user_len, user_fh):
     # 2. DEFINE TRAINING DATA (ALL FILES 1-8)
     # ==========================================
     X_train = np.array([
+        [6870, 3795, 5177],   # FILE_1
         [11646, 7657, 8735],  # FILE_2
         [5862, 11681, 3634],  # FILE_3
         [6464, 11335, 3911],  # FILE_4
@@ -495,6 +496,7 @@ def predict_single_mill(user_dia, user_len, user_fh):
     ])
     
     y_train = np.array([
+        [166.6, 28.2, 140.7, 24.3],
         [942.1, 163.7, 815.6, 144.4],
         [337.2, 114.5, 315.3, 108.4],
         [403.4, 141.7, 371.9, 131.5],
